@@ -9,3 +9,6 @@ edition = "2021"
 bevy = "0.11.2"
 bevy_rapier2d = "0.22.0"
 lyon_tessellation = "1.0.10"
+
+[dev-dependencies]
+bevy_prototype_lyon = "0.9.0"
