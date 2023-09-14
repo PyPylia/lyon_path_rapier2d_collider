@@ -23,7 +23,7 @@ type Buffers = VertexBuffers<Vec2, u32>;
 
 #[inline]
 fn tessellate_fill(path: &Path, options: &FillOptions) -> Buffers {
-    let mut buffers: Buffers = VertexBuffers::new();
+    let mut buffers = VertexBuffers::new();
     let mut builder = BuffersBuilder::new(&mut buffers, PositionVertexConstructor);
 
     let mut tessellator = FillTessellator::new();
@@ -48,7 +48,7 @@ fn construct_trimesh(buffers: Buffers) -> Collider {
 }
 
 pub fn stroke_trimesh(path: &Path, options: &StrokeOptions) -> Collider {
-    let mut buffers: Buffers = VertexBuffers::new();
+    let mut buffers = VertexBuffers::new();
     let mut builder = BuffersBuilder::new(&mut buffers, PositionVertexConstructor);
 
     let mut tessellator = StrokeTessellator::new();
