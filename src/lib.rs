@@ -19,63 +19,52 @@ impl StrokeVertexConstructor<Vec2> for PositionVertexConstructor {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub enum ColliderType {
-    #[default]
-    ConvexHull,
-    Trimesh,
+type Buffers = VertexBuffers<Vec2, u32>;
+
+#[inline]
+fn tessellate_fill(path: &Path, options: &FillOptions) -> Buffers {
+    let mut buffers: Buffers = VertexBuffers::new();
+    let mut builder = BuffersBuilder::new(&mut buffers, PositionVertexConstructor);
+
+    let mut tessellator = FillTessellator::new();
+    tessellator
+        .tessellate_path(path, options, &mut builder)
+        .ok();
+
+    buffers
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum TessellationType {
-    Fill(FillOptions),
-    Stroke(StrokeOptions),
+#[inline]
+fn construct_trimesh(buffers: Buffers) -> Collider {
+    Collider::trimesh_with_flags(
+        buffers.vertices,
+        buffers
+            .indices
+            .chunks_exact(3)
+            .map(|i| [i[2], i[1], i[0]])
+            .collect(),
+        TriMeshFlags::MERGE_DUPLICATE_VERTICES,
+    )
 }
 
-impl Default for TessellationType {
-    fn default() -> Self {
-        TessellationType::Fill(FillOptions::default())
-    }
+pub fn stroke_trimesh(path: &Path, options: &StrokeOptions) -> Collider {
+    let mut buffers: Buffers = VertexBuffers::new();
+    let mut builder = BuffersBuilder::new(&mut buffers, PositionVertexConstructor);
+
+    let mut tessellator = StrokeTessellator::new();
+    tessellator
+        .tessellate_path(path, options, &mut builder)
+        .ok();
+
+    construct_trimesh(buffers)
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct ColliderConstructor {
-    pub tessellation_type: TessellationType,
-    pub collider_type: ColliderType,
+pub fn fill_trimesh(path: &Path, options: &FillOptions) -> Collider {
+    let buffers = tessellate_fill(path, options);
+    construct_trimesh(buffers)
 }
 
-impl ColliderConstructor {
-    pub fn construct(&self, path: &Path) -> Option<Collider> {
-        let mut vertex_buffers: VertexBuffers<Vec2, u32> = VertexBuffers::new();
-        let mut vertex_builder =
-            BuffersBuilder::new(&mut vertex_buffers, PositionVertexConstructor);
-
-        match self.tessellation_type {
-            TessellationType::Fill(options) => {
-                let mut tessellator = FillTessellator::new();
-                tessellator
-                    .tessellate_path(path, &options, &mut vertex_builder)
-                    .ok();
-            }
-            TessellationType::Stroke(options) => {
-                let mut tessellator = StrokeTessellator::new();
-                tessellator
-                    .tessellate_path(path, &options, &mut vertex_builder)
-                    .ok();
-            }
-        };
-
-        match self.collider_type {
-            ColliderType::ConvexHull => Collider::convex_hull(&vertex_buffers.vertices),
-            ColliderType::Trimesh => Some(Collider::trimesh_with_flags(
-                vertex_buffers.vertices,
-                vertex_buffers
-                    .indices
-                    .chunks_exact(3)
-                    .map(|i| [i[0], i[1], i[2]])
-                    .collect(),
-                TriMeshFlags::MERGE_DUPLICATE_VERTICES,
-            )),
-        }
-    }
+pub fn convex_hull(path: &Path, options: &FillOptions) -> Option<Collider> {
+    let buffers = tessellate_fill(path, options);
+    Collider::convex_hull(&buffers.vertices)
 }
